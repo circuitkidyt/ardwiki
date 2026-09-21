@@ -2,7 +2,8 @@ import './style.css'
 
 type Support = 'Both' | 'Arduino' | 'ESP32'
 type FunctionEntry = { kind: 'function'; name: string; group: string; summary: string; syntax: string; parameters: string; returns: string; example: string; behavior: string; tips: string; mistakes: string; support: Support }
-type ComponentEntry = { kind: 'component'; name: string; group: string; summary: string; whatItDoes: string; pins: string; connection: string; specs: string; tips: string; mistakes: string; support: Support; visual: string }
+type ComponentFunction = { name: string; explanation: string; syntax: string; example: string }
+type ComponentEntry = { kind: 'component'; name: string; group: string; summary: string; whatItDoes: string; pins: string; connection: string; specs: string; tips: string; mistakes: string; support: Support; visual: string; functions?: ComponentFunction[] }
 type WikiItem = FunctionEntry | ComponentEntry
 type QuizQuestion = { prompt: string; choices: string[]; answer: number; explanation: string; topic: string }
 
@@ -71,6 +72,135 @@ const componentExamples: Record<string, { code: string; explanation: string }> =
   Breadboard: { code: 'const int ledPin = 13;\n\nvoid setup() {\n  pinMode(ledPin, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(ledPin, HIGH);\n}', explanation: 'The breadboard is the physical connection surface. The code stays simple because the board handles the temporary wiring.' },
 }
 
+const componentFunction = (name: string, explanation: string, syntax: string, example: string): ComponentFunction => ({ name, explanation, syntax, example })
+const componentFunctionSets: Record<string, ComponentFunction[]> = {
+  LED: [
+    componentFunction('pinMode()', 'Prepare the LED pin as an output before controlling it.', 'pinMode(pin, OUTPUT);', 'pinMode(13, OUTPUT);'),
+    componentFunction('digitalWrite()', 'Turn a basic LED fully on or fully off.', 'digitalWrite(pin, value);', 'digitalWrite(13, HIGH);'),
+    componentFunction('analogWrite()', 'Dim a PWM-capable LED with a value from 0 to 255.', 'analogWrite(pin, brightness);', 'analogWrite(9, 128);'),
+    componentFunction('delay()', 'Keep the LED on or off for an easy-to-see amount of time.', 'delay(milliseconds);', 'delay(500);'),
+  ],
+  Resistor: [
+    componentFunction('pinMode()', 'Set up the pin that uses the resistor as an input or output.', 'pinMode(pin, mode);', 'pinMode(13, OUTPUT);'),
+    componentFunction('digitalWrite()', 'Send a HIGH or LOW signal through a resistor to a safe load.', 'digitalWrite(pin, value);', 'digitalWrite(13, HIGH);'),
+    componentFunction('analogRead()', 'Measure the voltage from a resistor divider.', 'analogRead(pin);', 'int voltage = analogRead(A0);'),
+  ],
+  Potentiometer: [
+    componentFunction('analogRead()', 'Read the changing voltage from the middle wiper pin.', 'analogRead(pin);', 'int raw = analogRead(A0);'),
+    componentFunction('map()', 'Scale the knob reading into a useful range such as brightness or angle.', 'map(value, fromLow, fromHigh, toLow, toHigh);', 'int angle = map(raw, 0, 1023, 0, 180);'),
+    componentFunction('constrain()', 'Keep the scaled value inside the safe range for the next component.', 'constrain(value, min, max);', 'angle = constrain(angle, 0, 180);'),
+  ],
+  'Push Button': [
+    componentFunction('pinMode()', 'Configure the button input and turn on the board\'s internal pull-up.', 'pinMode(pin, INPUT_PULLUP);', 'pinMode(buttonPin, INPUT_PULLUP);'),
+    componentFunction('digitalRead()', 'Check whether the button is pressed or released.', 'digitalRead(pin);', 'int state = digitalRead(buttonPin);'),
+    componentFunction('INPUT_PULLUP', 'Use the internal resistor so the input stays stable without an external resistor.', 'pinMode(pin, INPUT_PULLUP);', 'pinMode(7, INPUT_PULLUP); // pressed = LOW'),
+    componentFunction('delay()', 'Add a short pause while learning simple button debounce.', 'delay(milliseconds);', 'delay(20);'),
+  ],
+  Buzzer: [
+    componentFunction('pinMode()', 'Prepare a simple buzzer pin for output.', 'pinMode(pin, OUTPUT);', 'pinMode(8, OUTPUT);'),
+    componentFunction('tone()', 'Generate a pitch on a passive buzzer.', 'tone(pin, frequency);', 'tone(8, 440);'),
+    componentFunction('noTone()', 'Stop the tone on that buzzer pin.', 'noTone(pin);', 'noTone(8);'),
+    componentFunction('delay()', 'Control how long the note lasts.', 'delay(milliseconds);', 'delay(500);'),
+  ],
+  'Servo Motor': [
+    componentFunction('attach()', 'Connect a Servo object to its signal pin.', 'servo.attach(pin);', 'arm.attach(9);'),
+    componentFunction('write()', 'Ask the servo to move to an angle, usually from 0 to 180.', 'servo.write(angle);', 'arm.write(90);'),
+    componentFunction('read()', 'Get the last angle requested from the servo.', 'servo.read();', 'int angle = arm.read();'),
+    componentFunction('detach()', 'Stop sending control pulses when the servo should be released.', 'servo.detach();', 'arm.detach();'),
+  ],
+  'HC-SR04 Ultrasonic Sensor': [
+    componentFunction('pinMode()', 'Set TRIG as an output and ECHO as an input.', 'pinMode(pin, mode);', 'pinMode(trigPin, OUTPUT);\npinMode(echoPin, INPUT);'),
+    componentFunction('digitalWrite()', 'Send a short HIGH pulse to start a distance measurement.', 'digitalWrite(pin, value);', 'digitalWrite(trigPin, HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trigPin, LOW);'),
+    componentFunction('pulseIn()', 'Measure how long the ECHO pin stays HIGH.', 'pulseIn(pin, HIGH);', 'long time = pulseIn(echoPin, HIGH);'),
+    componentFunction('digitalRead()', 'Check the echo pin when learning the sensor signal.', 'digitalRead(pin);', 'int echoState = digitalRead(echoPin);'),
+  ],
+  'DHT11 / DHT22': [
+    componentFunction('begin()', 'Start the DHT library before requesting readings.', 'sensor.begin();', 'sensor.begin();'),
+    componentFunction('readTemperature()', 'Read the latest temperature value from the sensor.', 'sensor.readTemperature();', 'float c = sensor.readTemperature();'),
+    componentFunction('readHumidity()', 'Read relative humidity as a percentage.', 'sensor.readHumidity();', 'float humidity = sensor.readHumidity();'),
+    componentFunction('delay()', 'Wait between readings because DHT sensors are slow.', 'delay(milliseconds);', 'delay(2000);'),
+  ],
+  'OLED Display': [
+    componentFunction('begin()', 'Start the display over I2C or SPI using its address and power mode.', 'display.begin(mode, address);', 'display.begin(SSD1306_SWITCHCAPVCC, 0x3C);'),
+    componentFunction('clearDisplay()', 'Clear the display buffer before drawing a fresh frame.', 'display.clearDisplay();', 'display.clearDisplay();'),
+    componentFunction('setCursor()', 'Choose where the next text will begin.', 'display.setCursor(x, y);', 'display.setCursor(0, 0);'),
+    componentFunction('print()', 'Put text or a value into the display buffer.', 'display.print(value);', 'display.print("Ready");'),
+    componentFunction('display()', 'Send the buffer to the physical screen.', 'display.display();', 'display.display();'),
+  ],
+  'Relay Module': [
+    componentFunction('pinMode()', 'Prepare the relay control pin as an output.', 'pinMode(pin, OUTPUT);', 'pinMode(relayPin, OUTPUT);'),
+    componentFunction('digitalWrite()', 'Switch the relay coil on or off. Many modules are active LOW.', 'digitalWrite(pin, value);', 'digitalWrite(relayPin, LOW);'),
+    componentFunction('delay()', 'Leave the relay on for a controlled amount of time.', 'delay(milliseconds);', 'delay(1000);'),
+  ],
+  'DC Motor': [
+    componentFunction('pinMode()', 'Prepare a motor-driver control pin as an output.', 'pinMode(pin, OUTPUT);', 'pinMode(motorPin, OUTPUT);'),
+    componentFunction('analogWrite()', 'Set motor-driver speed with PWM.', 'analogWrite(pin, speed);', 'analogWrite(motorPin, 180);'),
+    componentFunction('digitalWrite()', 'Set a driver direction pin HIGH or LOW.', 'digitalWrite(pin, value);', 'digitalWrite(directionPin, HIGH);'),
+    componentFunction('delay()', 'Run the motor for a short test interval.', 'delay(milliseconds);', 'delay(1000);'),
+  ],
+  '28BYJ-48 Stepper Motor': [
+    componentFunction('Stepper()', 'Create a Stepper object with the motor step count and driver pins.', 'Stepper motor(steps, pin1, pin2, pin3, pin4);', 'Stepper motor(2048, 8, 10, 9, 11);'),
+    componentFunction('setSpeed()', 'Choose the stepper speed in revolutions per minute.', 'motor.setSpeed(rpm);', 'motor.setSpeed(10);'),
+    componentFunction('step()', 'Move a chosen number of steps; negative values reverse direction.', 'motor.step(numberOfSteps);', 'motor.step(2048);'),
+  ],
+  'PIR Sensor': [
+    componentFunction('pinMode()', 'Configure the PIR output as a digital input.', 'pinMode(pin, INPUT);', 'pinMode(motionPin, INPUT);'),
+    componentFunction('digitalRead()', 'Check whether motion is currently being reported.', 'digitalRead(pin);', 'if (digitalRead(motionPin) == HIGH) {\n  Serial.println("Motion");\n}'),
+    componentFunction('delay()', 'Wait while the sensor settles after power-up or a detection.', 'delay(milliseconds);', 'delay(1000);'),
+  ],
+  LDR: [
+    componentFunction('analogRead()', 'Read the voltage made by the LDR voltage divider.', 'analogRead(pin);', 'int light = analogRead(A0);'),
+    componentFunction('map()', 'Turn the raw light reading into a brightness percentage or PWM value.', 'map(value, fromLow, fromHigh, toLow, toHigh);', 'int brightness = map(light, 0, 1023, 0, 255);'),
+    componentFunction('constrain()', 'Prevent an unexpected reading from exceeding the output range.', 'constrain(value, min, max);', 'brightness = constrain(brightness, 0, 255);'),
+  ],
+  'Joystick Module': [
+    componentFunction('analogRead()', 'Read the joystick\'s X or Y axis voltage.', 'analogRead(pin);', 'int x = analogRead(xPin);'),
+    componentFunction('digitalRead()', 'Read the joystick push switch.', 'digitalRead(pin);', 'int pressed = digitalRead(switchPin);'),
+    componentFunction('map()', 'Convert an axis reading into a direction or motor speed.', 'map(value, fromLow, fromHigh, toLow, toHigh);', 'int speed = map(x, 0, 1023, -255, 255);'),
+  ],
+  'LCD Display': [
+    componentFunction('init()', 'Start an I2C character LCD.', 'lcd.init();', 'lcd.init();'),
+    componentFunction('backlight()', 'Turn the LCD backlight on or off.', 'lcd.backlight();', 'lcd.backlight();'),
+    componentFunction('setCursor()', 'Choose the column and row for the next characters.', 'lcd.setCursor(column, row);', 'lcd.setCursor(0, 1);'),
+    componentFunction('print()', 'Write text or a value to the character display.', 'lcd.print(value);', 'lcd.print("Hello board");'),
+  ],
+  'IR Receiver': [
+    componentFunction('begin()', 'Start listening for infrared remote signals.', 'IrReceiver.begin(pin);', 'IrReceiver.begin(2);'),
+    componentFunction('decode()', 'Check whether a complete remote command has arrived.', 'IrReceiver.decode();', 'if (IrReceiver.decode()) {\n  Serial.println("Received");\n}'),
+    componentFunction('resume()', 'Listen for the next infrared command after handling one.', 'IrReceiver.resume();', 'IrReceiver.resume();'),
+  ],
+  'RGB LED': [
+    componentFunction('pinMode()', 'Set each color channel as an output.', 'pinMode(pin, OUTPUT);', 'pinMode(redPin, OUTPUT);'),
+    componentFunction('analogWrite()', 'Set each color brightness with PWM to mix a color.', 'analogWrite(pin, brightness);', 'analogWrite(redPin, 255);\nanalogWrite(greenPin, 40);'),
+    componentFunction('digitalWrite()', 'Turn a color channel fully on or off.', 'digitalWrite(pin, value);', 'digitalWrite(bluePin, LOW);'),
+  ],
+}
+
+function defaultComponentFunctions(item: ComponentEntry): ComponentFunction[] {
+  if (item.group === 'Sensors') return [
+    componentFunction('pinMode()', 'Prepare the sensor signal pin for input or output.', 'pinMode(pin, mode);', 'pinMode(sensorPin, INPUT);'),
+    componentFunction('digitalRead()', 'Read a simple HIGH or LOW sensor signal.', 'digitalRead(pin);', 'int state = digitalRead(sensorPin);'),
+    componentFunction('analogRead()', 'Measure a changing sensor voltage when the module has an analog output.', 'analogRead(pin);', 'int reading = analogRead(A0);'),
+    componentFunction('Serial.println()', 'Print a reading while you test the sensor.', 'Serial.println(value);', 'Serial.println(reading);'),
+  ]
+  if (item.group === 'Displays') return [
+    componentFunction('begin()', 'Start the display library and its communication bus.', 'display.begin(...);', 'display.begin();'),
+    componentFunction('clear()', 'Clear old content before drawing a new screen.', 'display.clear();', 'display.clear();'),
+    componentFunction('print()', 'Write a short value or message.', 'display.print(value);', 'display.print("Ready");'),
+    componentFunction('display()', 'Refresh the physical display after drawing.', 'display.display();', 'display.display();'),
+  ]
+  if (item.group === 'Motors') return [
+    componentFunction('pinMode()', 'Prepare the motor-driver control pins.', 'pinMode(pin, OUTPUT);', 'pinMode(enablePin, OUTPUT);'),
+    componentFunction('analogWrite()', 'Set speed through a PWM-capable driver input.', 'analogWrite(pin, speed);', 'analogWrite(enablePin, 180);'),
+    componentFunction('digitalWrite()', 'Set a direction or enable signal.', 'digitalWrite(pin, value);', 'digitalWrite(directionPin, HIGH);'),
+  ]
+  return [
+    componentFunction('pinMode()', 'Prepare the component pin before using it.', 'pinMode(pin, mode);', 'pinMode(signalPin, OUTPUT);'),
+    componentFunction('digitalWrite()', 'Send a simple HIGH or LOW control signal.', 'digitalWrite(pin, value);', 'digitalWrite(signalPin, HIGH);'),
+    componentFunction('digitalRead()', 'Read a digital signal from the component.', 'digitalRead(pin);', 'int state = digitalRead(signalPin);'),
+  ]
+}
+
 const functionCatalog: Array<[string, string, string, Support]> = [
   ['tone()', 'Digital I/O', 'Make a buzzer play a tone on a pin.', 'Both'], ['noTone()', 'Digital I/O', 'Stop a tone that is playing.', 'Both'], ['pulseIn()', 'Digital I/O', 'Measure how long a pin stays HIGH or LOW.', 'Both'], ['pulseInLong()', 'Digital I/O', 'Measure a long pulse without timing out too quickly.', 'Both'], ['shiftIn()', 'Digital I/O', 'Read a series of bits from a shift register.', 'Both'], ['shiftOut()', 'Digital I/O', 'Send a series of bits to a shift register.', 'Both'], ['digitalPinToInterrupt()', 'Interrupts', 'Find the interrupt number for a digital pin.', 'Both'], ['attachInterrupt()', 'Interrupts', 'Run a small function when a pin changes.', 'Both'], ['detachInterrupt()', 'Interrupts', 'Stop listening for a pin interrupt.', 'Both'], ['interrupts()', 'Interrupts', 'Enable hardware interrupts again.', 'Both'], ['noInterrupts()', 'Interrupts', 'Temporarily pause hardware interrupts.', 'Both'], ['micros()', 'Timing', 'Read microseconds since the board started.', 'Both'], ['delayMicroseconds()', 'Timing', 'Pause for a very short number of microseconds.', 'Both'], ['yield()', 'Timing', 'Give the board a chance to handle background work.', 'ESP32'], ['hw_timer_t', 'Timers', 'Represent a hardware timer on ESP32.', 'ESP32'], ['timerBegin()', 'Timers', 'Create an ESP32 hardware timer.', 'ESP32'], ['timerAttachInterrupt()', 'Timers', 'Connect an ESP32 timer to a function.', 'ESP32'], ['timerAlarm()', 'Timers', 'Set when an ESP32 timer should fire.', 'ESP32'], ['random()', 'Math', 'Get a random number in a range.', 'Both'], ['randomSeed()', 'Math', 'Give the random number generator a starting value.', 'Both'], ['abs()', 'Math', 'Get the positive version of a number.', 'Both'], ['min()', 'Math', 'Choose the smaller of two values.', 'Both'], ['max()', 'Math', 'Choose the larger of two values.', 'Both'], ['sq()', 'Math', 'Square a number.', 'Both'], ['sqrt()', 'Math', 'Find the square root of a number.', 'Both'], ['pow()', 'Math', 'Raise a number to a power.', 'Both'], ['sin()', 'Math', 'Find the sine of an angle.', 'Both'], ['cos()', 'Math', 'Find the cosine of an angle.', 'Both'], ['tan()', 'Math', 'Find the tangent of an angle.', 'Both'], ['round()', 'Math', 'Round a decimal to the nearest whole number.', 'Both'], ['floor()', 'Math', 'Round a decimal down.', 'Both'], ['ceil()', 'Math', 'Round a decimal up.', 'Both'], ['bitRead()', 'Bits & Bytes', 'Read one bit inside a number.', 'Both'], ['bitWrite()', 'Bits & Bytes', 'Change one bit inside a number.', 'Both'], ['bitSet()', 'Bits & Bytes', 'Set one bit to 1.', 'Both'], ['bitClear()', 'Bits & Bytes', 'Set one bit to 0.', 'Both'], ['bitToggle()', 'Bits & Bytes', 'Flip one bit to its opposite value.', 'Both'], ['bit()', 'Bits & Bytes', 'Create a number with one bit set.', 'Both'], ['highByte()', 'Bits & Bytes', 'Get the high byte from a number.', 'Both'], ['lowByte()', 'Bits & Bytes', 'Get the low byte from a number.', 'Both'], ['word()', 'Bits & Bytes', 'Combine two bytes into a word.', 'Both'], ['Serial.available()', 'Serial Communication', 'Check how many serial bytes are waiting.', 'Both'], ['Serial.read()', 'Serial Communication', 'Read one waiting serial byte.', 'Both'], ['Serial.peek()', 'Serial Communication', 'Look at the next byte without removing it.', 'Both'], ['Serial.flush()', 'Serial Communication', 'Wait for outgoing serial data to finish.', 'Both'], ['Serial.write()', 'Serial Communication', 'Send raw bytes over serial.', 'Both'], ['Serial.setTimeout()', 'Serial Communication', 'Set how long serial reads should wait.', 'Both'], ['Serial1.begin()', 'UART', 'Start a second hardware serial port.', 'ESP32'], ['Serial2.begin()', 'UART', 'Start a third hardware serial port on ESP32.', 'ESP32'], ['Wire.begin()', 'I2C', 'Start the I2C bus.', 'Both'], ['Wire.requestFrom()', 'I2C', 'Ask an I2C device for bytes.', 'Both'], ['Wire.beginTransmission()', 'I2C', 'Start sending data to an I2C address.', 'Both'], ['Wire.endTransmission()', 'I2C', 'Finish an I2C message.', 'Both'], ['Wire.write()', 'I2C', 'Put a byte into an I2C message.', 'Both'], ['Wire.read()', 'I2C', 'Read a byte from an I2C device.', 'Both'], ['SPI.begin()', 'SPI', 'Start the SPI bus.', 'Both'], ['SPI.beginTransaction()', 'SPI', 'Reserve SPI with chosen settings.', 'Both'], ['SPI.endTransaction()', 'SPI', 'Release the SPI bus.', 'Both'], ['SPI.transfer()', 'SPI', 'Send and receive one SPI byte.', 'Both'], ['SPI.end()', 'SPI', 'Stop the SPI bus.', 'Both'], ['EEPROM.read()', 'Memory', 'Read one saved byte from EEPROM.', 'Arduino'], ['EEPROM.write()', 'Memory', 'Save one byte to EEPROM.', 'Arduino'], ['EEPROM.update()', 'Memory', 'Save only when a byte changed.', 'Arduino'], ['Preferences.begin()', 'Memory', 'Open ESP32 non-volatile storage.', 'ESP32'], ['Preferences.getInt()', 'Memory', 'Read a saved ESP32 integer.', 'ESP32'], ['Preferences.putInt()', 'Memory', 'Save an ESP32 integer.', 'ESP32'], ['WiFi.begin()', 'Wi-Fi', 'Connect an ESP32 to a Wi-Fi network.', 'ESP32'], ['WiFi.status()', 'Wi-Fi', 'Check the ESP32 Wi-Fi connection state.', 'ESP32'], ['WiFi.localIP()', 'Wi-Fi', 'Get the ESP32 local network address.', 'ESP32'], ['WiFi.disconnect()', 'Wi-Fi', 'Disconnect from the current Wi-Fi network.', 'ESP32'], ['WiFiServer.begin()', 'Wi-Fi', 'Start an ESP32 network server.', 'ESP32'], ['WiFiClient.connect()', 'Wi-Fi', 'Connect an ESP32 to a network service.', 'ESP32'], ['HTTPClient.begin()', 'Web', 'Prepare an ESP32 HTTP request.', 'ESP32'], ['HTTPClient.GET()', 'Web', 'Request a web page or API response.', 'ESP32'], ['WebServer.on()', 'Web', 'Choose what an ESP32 web server does for a URL.', 'ESP32'], ['WebServer.handleClient()', 'Web', 'Let an ESP32 web server process visitors.', 'ESP32'], ['File.open()', 'Files', 'Open a file on an ESP32 filesystem.', 'ESP32'], ['SPIFFS.begin()', 'Files', 'Start the ESP32 flash file system.', 'ESP32'], ['SD.begin()', 'Storage', 'Start an SD card module.', 'Both'], ['attach()', 'Servo', 'Connect a Servo object to a signal pin.', 'Both'], ['write()', 'Servo', 'Tell a servo which angle to move to.', 'Both'], ['read()', 'Servo', 'Ask a servo for its last angle.', 'Both'], ['Stepper.setSpeed()', 'Stepper', 'Choose a stepper motor speed.', 'Both'], ['Stepper.step()', 'Stepper', 'Move a stepper a number of steps.', 'Both'], ['analogReadResolution()', 'Analog I/O', 'Choose ADC reading precision on ESP32.', 'ESP32'], ['analogSetAttenuation()', 'Analog I/O', 'Choose the ESP32 ADC voltage range.', 'ESP32'], ['ledcAttach()', 'PWM', 'Attach an ESP32 PWM channel to a pin.', 'ESP32'], ['ledcWrite()', 'PWM', 'Set the duty cycle of an ESP32 PWM pin.', 'ESP32'], ['analogWriteResolution()', 'PWM', 'Choose PWM precision on a board.', 'Both'], ['analogWriteFrequency()', 'PWM', 'Choose how quickly a PWM signal switches.', 'ESP32'], ['attachCore()', 'ESP32 Core', 'Choose which ESP32 core runs a task.', 'ESP32'], ['xTaskCreate()', 'ESP32 Core', 'Create a FreeRTOS task on ESP32.', 'ESP32'], ['vTaskDelay()', 'ESP32 Core', 'Pause an ESP32 task without blocking everything.', 'ESP32'],
 ]
@@ -84,6 +214,7 @@ function makeComponent([name, group, summary, support, visual]: [string, string,
 
 functions.push(...functionCatalog.map(makeFunction).filter((item) => !functions.some((existing) => existing.name === item.name)))
 components.push(...componentCatalog.map(makeComponent).filter((item) => !components.some((existing) => existing.name === item.name)))
+components.forEach((item) => { item.functions = componentFunctionSets[item.name] || defaultComponentFunctions(item) })
 
 const quizQuestions: Record<string, QuizQuestion[]> = {
   Beginner: [
@@ -214,7 +345,8 @@ function renderCard(item: WikiItem) { const functionItem = item.kind === 'functi
 function visualLabel(visual: string) { return ({ led: 'LED', resistor: 'Ω', knob: '◉', button: '●', buzzer: ')))', servo: '↻', ultrasonic: ')))', sensor: 'DHT', oled: 'OLED', relay: '▣', motor: 'M', stepper: '↻', driver: 'ULN', pir: 'PIR', ldr: 'LDR', joystick: '✣', lcd: 'LCD', ir: 'IR', rgb: 'RGB', breadboard: '▦' } as Record<string, string>)[visual] || 'PART' }
 function renderDetail(item: WikiItem) { const functionItem = item.kind === 'function'; return `<div class="detail-view"><div class="breadcrumbs"><button data-action="home">Home</button><span>/</span><button data-action="nav" data-kind="${functionItem ? 'functions' : 'components'}">${functionItem ? 'Functions' : 'Components'}</button><span>/</span><strong>${item.name}</strong></div><button class="back-link" data-action="back">← Back to ${functionItem ? 'functions' : 'components'}</button><div class="detail-header"><div><span class="type-label ${functionItem ? 'code-label' : 'part-label'}">${functionItem ? '</> FUNCTION' : '◈ COMPONENT'}</span><h1>${item.name}</h1><p>${item.summary}</p></div><span class="support large ${supportClass(item.support)}"><i></i>Works with ${item.support}</span></div>${functionItem ? renderFunctionDetail(item) : renderComponentDetail(item)}${renderRelated(item)}</div>` }
 function renderFunctionDetail(item: FunctionEntry) { return `<div class="detail-grid"><div class="detail-main"><section class="info-block"><h2>Syntax</h2><div class="code-block"><div class="code-toolbar"><span>arduino</span><button data-action="copy" data-code="${escapeHtml(item.example)}">□ Copy code</button></div><pre><code>${highlight(item.syntax)}</code></pre></div></section><section class="info-block"><h2>Parameters</h2><p>${item.parameters}</p></section><section class="info-block"><h2>Return value</h2><p>${item.returns}</p></section><section class="info-block"><h2>Example</h2><div class="code-block"><div class="code-toolbar"><span>arduino</span><button data-action="copy" data-code="${escapeHtml(item.example)}">□ Copy code</button></div><pre><code>${highlight(item.example)}</code></pre></div><div class="behavior"><strong>What happens?</strong><span>${item.behavior}</span></div></section><button class="learn-link" data-action="quiz-link" data-category="Functions">Test this idea in the Functions quiz →</button></div><aside class="detail-aside"><div class="aside-card"><span class="aside-kicker">GOOD TO KNOW</span><strong>Beginner tip</strong><p>${item.tips}</p></div><div class="aside-card warning"><span class="aside-kicker">WATCH OUT</span><strong>Common mistake</strong><p>${item.mistakes}</p></div><div class="aside-card board-compat"><span class="aside-kicker">COMPATIBILITY</span><strong>Supported boards</strong><div class="compat-row"><span class="board-chip arduino">A</span> Arduino ${item.support !== 'ESP32' ? '<b>✓</b>' : ''}</div><div class="compat-row"><span class="board-chip esp">E</span> ESP32 ${item.support !== 'Arduino' ? '<b>✓</b>' : ''}</div></div></aside></div>` }
-function renderComponentDetail(item: ComponentEntry) { const example = componentExamples[item.name] || { code: `const int signalPin = 2;\n\nvoid setup() {\n  pinMode(signalPin, INPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  Serial.println(digitalRead(signalPin));\n  delay(200);\n}`, explanation: 'This starter pattern powers the component, reads its signal pin, and prints a simple value so you can see what it is doing.' }; return `<div class="component-detail-grid"><div><div class="detail-component-visual ${item.visual}"><span>${visualLabel(item.visual)}</span></div><section class="info-block"><h2>What it is</h2><p>${item.whatItDoes}</p></section><section class="info-block"><h2>Pins & connection</h2><p><strong>Pins:</strong> ${item.pins}</p><p><strong>Common connection:</strong> ${item.connection}</p></section><section class="info-block"><h2>See it in code</h2><div class="code-block"><div class="code-toolbar"><span>arduino / esp32</span><button data-action="copy" data-code="${escapeHtml(example.code)}">□ Copy code</button></div><pre><code>${highlight(example.code)}</code></pre></div><div class="behavior"><strong>Component focus</strong><span>${example.explanation}</span></div></section><button class="learn-link" data-action="quiz-link" data-category="Components">Test this component in the Components quiz →</button></div><aside class="detail-aside"><div class="aside-card"><span class="aside-kicker">IMPORTANT SPECS</span><p>${item.specs}</p></div><div class="aside-card"><span class="aside-kicker">BEGINNER TIP</span><p>${item.tips}</p></div><div class="aside-card warning"><span class="aside-kicker">COMMON MISTAKE</span><p>${item.mistakes}</p></div><div class="aside-card board-compat"><span class="aside-kicker">COMPATIBILITY</span><strong>Works with ${item.support}</strong></div></aside></div>` }
+function renderComponentFunction(entry: ComponentFunction, index: number) { return `<details class="component-function" ${index === 0 ? 'open' : ''}><summary><span><strong>${entry.name}</strong><small>${entry.explanation}</small></span><b>+</b></summary><div class="component-function-body"><div><span class="function-label">Syntax</span><code>${highlight(entry.syntax)}</code></div><div><span class="function-label">Example</span><pre><code>${highlight(entry.example)}</code></pre></div></div></details>` }
+function renderComponentDetail(item: ComponentEntry) { const example = componentExamples[item.name] || { code: `const int signalPin = 2;\n\nvoid setup() {\n  pinMode(signalPin, INPUT);\n  Serial.begin(9600);\n}\n\nvoid loop() {\n  Serial.println(digitalRead(signalPin));\n  delay(200);\n}`, explanation: 'This starter pattern powers the component, reads its signal pin, and prints a simple value so you can see what it is doing.' }; return `<div class="component-detail-grid"><div><div class="detail-component-visual ${item.visual}"><span>${visualLabel(item.visual)}</span></div><section class="info-block"><h2>What it is</h2><p>${item.whatItDoes}</p></section><section class="info-block"><h2>Pins & connection</h2><p><strong>Pins:</strong> ${item.pins}</p><p><strong>Common connection:</strong> ${item.connection}</p></section><section class="info-block component-functions"><div class="component-functions-heading"><div><h2>Common functions</h2><p>Open a function to see its syntax and a component-sized example.</p></div><span>${item.functions?.length || 0} essentials</span></div>${(item.functions || []).map(renderComponentFunction).join('')}</section><section class="info-block"><h2>See it in code</h2><div class="code-block"><div class="code-toolbar"><span>arduino / esp32</span><button data-action="copy" data-code="${escapeHtml(example.code)}">□ Copy code</button></div><pre><code>${highlight(example.code)}</code></pre></div><div class="behavior"><strong>Component focus</strong><span>${example.explanation}</span></div></section><button class="learn-link" data-action="quiz-link" data-category="Components">Test this component in the Components quiz →</button></div><aside class="detail-aside"><div class="aside-card"><span class="aside-kicker">IMPORTANT SPECS</span><p>${item.specs}</p></div><div class="aside-card"><span class="aside-kicker">BEGINNER TIP</span><p>${item.tips}</p></div><div class="aside-card warning"><span class="aside-kicker">COMMON MISTAKE</span><p>${item.mistakes}</p></div><div class="aside-card board-compat"><span class="aside-kicker">COMPATIBILITY</span><strong>Works with ${item.support}</strong></div></aside></div>` }
 function renderRelated(item: WikiItem) { const related = allItems.filter((candidate) => candidate !== item && candidate.group === item.group).slice(0, 4); return related.length ? `<section class="related-section"><div class="eyebrow small">KEEP EXPLORING</div><h2>Related reference</h2><div class="related-grid">${related.map((candidate) => `<button class="related-card" data-action="open-${candidate.kind}" data-name="${candidate.name}"><span>${candidate.kind === 'function' ? '</>' : '◈'}</span><strong>${candidate.name}</strong><small>${candidate.summary}</small></button>`).join('')}</div></section>` : '' }
 function highlight(code: string) { return escapeHtml(code).replace(/(pinMode|digitalWrite|digitalRead|analogRead|analogWrite|delay|millis|map|constrain|Serial|if|else|for|while|switch|case)/g, '<span class="syntax-purple">$1</span>').replace(/(HIGH|LOW|INPUT|OUTPUT|A0|int|unsigned long)/g, '<span class="syntax-blue">$1</span>').replace(/(&quot;.*?&quot;)/g, '<span class="syntax-green">$1</span>') }
 function escapeHtml(text: string) { return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }

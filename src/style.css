@@ -106,3 +106,23 @@ kbd { color: var(--faint); border: 1px solid var(--line); border-radius: 4px; pa
 .filter-bar { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--faint); font-size: 10px; }
 .filter-bar select { appearance: none; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--muted); padding: 6px 23px 6px 8px; font-size: 10px; background-image: linear-gradient(45deg, transparent 50%, var(--faint) 50%), linear-gradient(135deg, var(--faint) 50%, transparent 50%); background-position: calc(100% - 10px) 10px, calc(100% - 6px) 10px; background-size: 4px 4px, 4px 4px; background-repeat: no-repeat; }
 .filter-bar select:focus { outline: 1px solid var(--accent); }
+.component-functions-heading { display: flex; justify-content: space-between; align-items: end; gap: 14px; margin-bottom: 13px; }
+.component-functions-heading h2 { margin-bottom: 6px; }
+.component-functions-heading p { font-size: 11px; line-height: 1.5; margin: 0; }
+.component-functions-heading > span { color: var(--faint); font: 10px 'DM Mono', monospace; white-space: nowrap; }
+.component-function { border: 1px solid var(--line); border-radius: 7px; background: var(--panel); margin-top: 7px; overflow: hidden; }
+.component-function summary { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.component-function summary::-webkit-details-marker { display: none; }
+.component-function summary:hover { background: var(--panel-soft); }
+.component-function summary strong, .component-function summary small { display: block; }
+.component-function summary strong { color: var(--text); font: 12px 'DM Mono', monospace; }
+.component-function summary small { color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 4px; }
+.component-function summary b { color: var(--accent); font-size: 17px; font-weight: 400; }
+.component-function[open] summary b { transform: rotate(45deg); }
+.component-function-body { border-top: 1px solid var(--line); padding: 13px 14px 15px; display: grid; gap: 12px; }
+.component-function-body > div { min-width: 0; }
+.function-label { display: block; color: var(--faint); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.component-function-body code, .component-function-body pre { display: block; margin: 0; overflow: auto; color: var(--text); font: 11px/1.7 'DM Mono', monospace; white-space: pre-wrap; }
+.component-function-body > div:first-child code { padding: 9px 10px; border-radius: 5px; background: #111216; }
+.light .component-function-body > div:first-child code { background: #25262b; }
+@media (max-width: 440px) { .component-functions-heading { align-items: start; flex-direction: column; gap: 5px; } }
